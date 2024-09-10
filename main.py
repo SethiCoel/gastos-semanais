@@ -4,12 +4,9 @@ import sys
 import platform
 from time import sleep
 from datetime import datetime, timedelta
-import locale
 
 conn = sqlite3.connect('database_gastos.db')
 cursor = conn.cursor()
-
-locale.setlocale(locale.LC_ALL, 'pt_BR.utf-8')
 
 data_atual = datetime.now()
 
