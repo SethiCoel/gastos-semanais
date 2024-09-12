@@ -25,15 +25,25 @@ def criar_tabela():
                         valor_inicial float,
                         valor_restante float,
                         valor_cache float,
+                        valor_reserva float,
                         data_inicio integer,
                         dias integer,
                         semana integer,
-                        ultima_atualizacao text
+                        ultima_atualizacao text,
+                        dinheiro_semana1 text,
+                        dinheiro_semana2 text,
+                        dinheiro_semana3 text,
+                        dinheiro_semana4 text
                         ) ''')
     cursor.execute(f'insert into "{nome_tabela}" (id) values (1)')
     cursor.execute(f'update "{nome_tabela}" set valor_cache = 0 where id = 1')
     cursor.execute(f'update "{nome_tabela}" set semana = 1 where id = 1')
     cursor.execute(f'update "{nome_tabela}" set valor_restante = 0 where id = 1')
+    cursor.execute(f'update "{nome_tabela}" set valor_reserva = 0 where id = 1')
+    cursor.execute(f'update "{nome_tabela}" set dinheiro_semana1 = "nao_feito" where id = 1')
+    cursor.execute(f'update "{nome_tabela}" set dinheiro_semana2 = "nao_feito" where id = 1')
+    cursor.execute(f'update "{nome_tabela}" set dinheiro_semana3 = "nao_feito" where id = 1')
+    cursor.execute(f'update "{nome_tabela}" set dinheiro_semana4 = "nao_feito" where id = 1')
     conn.commit()
 
     print('Tabela Criada!')
@@ -231,17 +241,14 @@ def calc_valor():
 
             # Diferença de dias desde a última atualização
             dias_passados = (hoje - ultima_atualizacao).days
-
+            
+            
             # Se passaram mais de 7 dias, atualize a semana
             if dias_passados >= 7:
                 semanas_adicionais = dias_passados // 7
                 dias = (dias_passados % 7) + 1  # Reseta os dias para 1 depois de 7
                 semana = (semana + semanas_adicionais - 1) % 5 + 1  # Atualiza a semana e reseta após 5
-
-                # Atualizar a semana e a data da última atualização no banco de dados
-                # cursor.execute(f'UPDATE "{nome_tabela}" SET semana = {semana}, ultima_atualizacao = "{hoje.strftime("%Y-%m-%d")}" WHERE id = 1')
-                # conn.commit()
-            
+                
             else:
                 # Se não passaram 7 dias, mantenha os dias atualizados mas sem resetar a semana
                 dias = (dias_passados % 7) + 1
@@ -249,6 +256,34 @@ def calc_valor():
             if semana > 4:
                 fim_semana()
 
+            if semana == 1 and not tentar_resetar_dinheiro(1):
+                dinheiro_resetado(1)
+                cursor.execute(f'update "{nome_tabela}" set valor_restante = 0 where id = 1')
+                cursor.execute(f'update "{nome_tabela}" set valor_reserva = 0 where id = 1')
+                conn.commit()
+                calc_valor()
+
+            if semana == 2 and not tentar_resetar_dinheiro(2):
+                dinheiro_resetado(2)
+                cursor.execute(f'update "{nome_tabela}" set valor_restante = 0 where id = 1')
+                cursor.execute(f'update "{nome_tabela}" set valor_reserva = 0 where id = 1')
+                conn.commit()
+                calc_valor()
+
+            if semana == 3 and not tentar_resetar_dinheiro(3):
+                dinheiro_resetado(3)
+                cursor.execute(f'update "{nome_tabela}" set valor_restante = 0 where id = 1')
+                cursor.execute(f'update "{nome_tabela}" set valor_reserva = 0 where id = 1')
+                conn.commit()
+                calc_valor()
+
+            if semana == 4 and not tentar_resetar_dinheiro(4):
+                dinheiro_resetado(4)
+                cursor.execute(f'update "{nome_tabela}" set valor_restante = 0 where id = 1')
+                cursor.execute(f'update "{nome_tabela}" set valor_reserva = 0 where id = 1')
+                conn.commit()
+                calc_valor()
+                
 
             print(f'Valor por semana: R${valor_disponivel:.2f}'.replace('.' , ','))
 
@@ -270,22 +305,72 @@ def calc_valor():
                 sleep(1)
 
         except TypeError as error:
-            print(f'Nenhum valor registrado!', error)
-            sleep(5)
+            print(f'Nenhum valor registrado!')
+            sleep(2)
             
             main()
+
+def dinheiro_resetado(semana):
+    if semana == 1:
+        cursor.execute(f'update "{nome_tabela}" set dinheiro_semana1 = "feito" where id = 1')
+
+    if semana == 2:
+        cursor.execute(f'update "{nome_tabela}" set dinheiro_semana2 = "feito" where id = 1')
+
+    if semana == 3:
+        cursor.execute(f'update "{nome_tabela}" set dinheiro_semana3 = "feito" where id = 1')
+    
+    if semana == 4:
+        cursor.execute(f'update "{nome_tabela}" set dinheiro_semana4 = "feito" where id = 1')
+
+    conn.commit()
+
+def tentar_resetar_dinheiro(semana):
+    if semana == 1:
+
+        dinheiro1 = cursor.execute(f'select dinheiro_semana1 from "{nome_tabela}" ').fetchone()[0]
+        if dinheiro1 == 'feito':
+            return True
+        
+        return False
+    
+    if semana == 2:
+
+        dinheiro2 = cursor.execute(f'select dinheiro_semana2 from "{nome_tabela}" ').fetchone()[0]
+        if dinheiro2 == 'feito':
+            return True
+        
+        return False
+    
+    if semana == 3:
+
+        dinheiro3 = cursor.execute(f'select dinheiro_semana3 from "{nome_tabela}" ').fetchone()[0]
+        if dinheiro3 == 'feito':
+            return True
+        
+        return False
+    
+    if semana == 4:
+
+        dinheiro4 = cursor.execute(f'select dinheiro_semana4 from "{nome_tabela}" ').fetchone()[0]
+        if dinheiro4 == 'feito':
+            return True
+        
+        return False
 
 def compras():
     while True:
         limpar_tela()
         
         valor_semanal = cursor.execute(f'select valor_inicial from "{nome_tabela}" ').fetchone()[0]
-        valor_disponivel = int(valor_semanal) / 4
         valor_cache = cursor.execute(f'select valor_cache from "{nome_tabela}" ').fetchone()[0]
         valor_restante = cursor.execute(f'select valor_restante from "{nome_tabela}" ').fetchone()[0]
-
-        valor = (valor_disponivel - valor_restante) - valor_cache
+        valor_reserva = cursor.execute(f'select valor_reserva from "{nome_tabela}" ').fetchone()[0]
         
+        valor_disponivel = (valor_semanal / 4) - valor_reserva
+
+        valor = ((valor_semanal / 4) - valor_restante) - valor_cache
+
         print('Coloque o valor individual de cada item abaixo\n')
         
         print(f'Valor Disponível: R${valor:.2f}'.replace('.' , ','))
@@ -298,15 +383,17 @@ def compras():
 
             itens = float(input('\nValor do item: ').replace(',' , '.'))
 
-            if itens > valor:
+            if itens > valor_disponivel:
                 limpar_tela()
                 
                 print('Valor maior que o disponível!')
                 sleep(2)
+            
 
             elif itens > 1:
                 cursor.execute(f'update "{nome_tabela}" set valor_cache = valor_cache + {itens} where id = 1')
                 conn.commit()
+                
 
             elif itens == 0:
                 limpar_tela()
@@ -316,14 +403,17 @@ def compras():
                 
                 print('Compra Cancelada!')
                 print('Nenhum valor foi adicionado')
-                sleep(2)
+                sleep(1)
                 
                 calc_valor()
             
             elif itens == 1:
                 cursor.execute(f'update "{nome_tabela}" set valor_restante = valor_restante + valor_cache where id = 1')
+                cursor.execute(f'update "{nome_tabela}" set valor_reserva = valor_cache where id = 1')
                 cursor.execute(f'update "{nome_tabela}" set valor_cache = 0 where id = 1')
                 conn.commit()
+                
+                
                 
                 print('Compra Finalizada!')
                 sleep(2)
@@ -343,7 +433,6 @@ def fim_semana():
     print('Inicie um nova tabela para continuar!')
     sleep(4)
     main()
-
 
 def limpar_tela():
     sistema = platform.system()
@@ -380,7 +469,6 @@ def main():
             
             print('Opção Inválida!')
             sleep(2)      
-
 
 if __name__ == '__main__':
     main()
